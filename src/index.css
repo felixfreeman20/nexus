@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-bg-primary: #1a1b1e;
+    --color-bg-secondary: #141517;
+    --color-bg-tertiary: #2b2d31;
+    --color-bg-hover: #35373c;
+    --color-bg-active: #404249;
+    --color-bg-input: #1e1f22;
+    --color-accent: #5865f2;
+    --color-accent-hover: #4752c4;
+    --color-accent-light: #7289da;
+    --color-danger: #ed4245;
+    --color-success: #3ba55d;
+    --color-warning: #faa61a;
+    --color-text-primary: #dbdee1;
+    --color-text-secondary: #949ba4;
+    --color-text-muted: #6d6f78;
+    --color-text-link: #00aff4;
+    --color-border: #3f4147;
+    --color-scrollbar: #1e1f22;
+    --color-scrollbar-thumb: #3f4147;
+    --font-sans: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0px 1000px var(--color-bg-input) inset;
+    -webkit-text-fill-color: var(--color-text-primary);
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-scrollbar);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-scrollbar-thumb);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-bg-hover);
+  }
+}
