@@ -326,7 +326,7 @@ export default function FriendsPage({ onOpenDM }) {
   } = useFriends()
 
   const onlineFriends = friends.filter(f => f.status === 'online')
-  const pendingCount = incomingRequests.length
+  const pendingCount = incomingRequests.length + outgoingRequests.length
 
   function renderContent() {
     if (loading) {
