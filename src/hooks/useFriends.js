@@ -7,6 +7,17 @@ import {
 import { db } from '../firebase/config'
 import { useAuth } from '../contexts/AuthContext'
 
+async function fetchUserProfile(uid) {
+  try {
+    const snap = await getDoc(doc(db, 'users', uid))
+    if (snap.exists()) return snap.data()
+    // Fallback — user doc may not exist yet
+    return { uid, username: uid, displayName: 'Unknown User', status: 'offline', avatar: null }
+  } catch {
+    return { uid, username: uid, displayName: 'Unknown User', status: 'offline', avatar: null }
+  }
+}
+
 export function useFriends() {
   const { currentUser } = useAuth()
   const [friends, setFriends] = useState([])
@@ -14,21 +25,20 @@ export function useFriends() {
   const [outgoingRequests, setOutgoingRequests] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Listen to friends subcollection
+  // Friends subcollection listener
   useEffect(() => {
     if (!currentUser) return
     const friendsRef = collection(db, 'users', currentUser.uid, 'friends')
     const unsub = onSnapshot(friendsRef, async (snap) => {
-      const friendDocs = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
       const profiles = await Promise.all(
-        friendDocs.map(async (f) => {
-          const userSnap = await getDoc(doc(db, 'users', f.uid))
-          return userSnap.exists() ? { ...userSnap.data(), addedAt: f.addedAt } : null
+        snap.docs.map(async (d) => {
+          const profile = await fetchUserProfile(d.id)
+          return { ...profile, addedAt: d.data().addedAt }
         })
       )
-      setFriends(profiles.filter(Boolean))
+      setFriends(profiles)
       setLoading(false)
-    })
+    }, () => setLoading(false))
     return unsub
   }, [currentUser])
 
@@ -41,28 +51,15 @@ export function useFriends() {
       where('status', '==', 'pending')
     )
     const unsub = onSnapshot(q, async (snap) => {
-      try {
-        const requests = await Promise.all(
-          snap.docs.map(async (d) => {
-            const data = d.data()
-            try {
-              const userSnap = await getDoc(doc(db, 'users', data.fromUid))
-              return {
-                requestId: d.id, ...data,
-                fromUser: userSnap.exists() ? userSnap.data() : { username: data.fromUid, displayName: 'Unknown User' },
-              }
-            } catch {
-              return { requestId: d.id, ...data, fromUser: { username: data.fromUid, displayName: 'Unknown User' } }
-            }
-          })
-        )
-        setIncomingRequests(requests)
-      } catch (err) {
-        console.error('Incoming requests error:', err)
-      }
-    }, (err) => {
-      console.error('Incoming listener error:', err)
-    })
+      const requests = await Promise.all(
+        snap.docs.map(async (d) => {
+          const data = d.data()
+          const fromUser = await fetchUserProfile(data.fromUid)
+          return { requestId: d.id, ...data, fromUser }
+        })
+      )
+      setIncomingRequests(requests)
+    }, (err) => console.error('Incoming listener:', err))
     return unsub
   }, [currentUser])
 
@@ -75,28 +72,15 @@ export function useFriends() {
       where('status', '==', 'pending')
     )
     const unsub = onSnapshot(q, async (snap) => {
-      try {
-        const requests = await Promise.all(
-          snap.docs.map(async (d) => {
-            const data = d.data()
-            try {
-              const userSnap = await getDoc(doc(db, 'users', data.toUid))
-              return {
-                requestId: d.id, ...data,
-                toUser: userSnap.exists() ? userSnap.data() : { username: data.toUid, displayName: 'Unknown User' },
-              }
-            } catch {
-              return { requestId: d.id, ...data, toUser: { username: data.toUid, displayName: 'Unknown User' } }
-            }
-          })
-        )
-        setOutgoingRequests(requests)
-      } catch (err) {
-        console.error('Outgoing requests error:', err)
-      }
-    }, (err) => {
-      console.error('Outgoing listener error:', err)
-    })
+      const requests = await Promise.all(
+        snap.docs.map(async (d) => {
+          const data = d.data()
+          const toUser = await fetchUserProfile(data.toUid)
+          return { requestId: d.id, ...data, toUser }
+        })
+      )
+      setOutgoingRequests(requests)
+    }, (err) => console.error('Outgoing listener:', err))
     return unsub
   }, [currentUser])
 
@@ -114,7 +98,7 @@ export function useFriends() {
     ))
     if (!existingSnap.empty) throw new Error('Request already sent')
 
-    // If they already sent us one, auto-accept
+    // Auto-accept if they already sent us one
     const reverseSnap = await getDocs(query(
       collection(db, 'friendRequests'),
       where('fromUid', '==', toUid),
