@@ -41,17 +41,27 @@ export function useFriends() {
       where('status', '==', 'pending')
     )
     const unsub = onSnapshot(q, async (snap) => {
-      const requests = await Promise.all(
-        snap.docs.map(async (d) => {
-          const data = d.data()
-          const userSnap = await getDoc(doc(db, 'users', data.fromUid))
-          return {
-            requestId: d.id, ...data,
-            fromUser: userSnap.exists() ? userSnap.data() : null,
-          }
-        })
-      )
-      setIncomingRequests(requests.filter(r => r.fromUser))
+      try {
+        const requests = await Promise.all(
+          snap.docs.map(async (d) => {
+            const data = d.data()
+            try {
+              const userSnap = await getDoc(doc(db, 'users', data.fromUid))
+              return {
+                requestId: d.id, ...data,
+                fromUser: userSnap.exists() ? userSnap.data() : { username: data.fromUid, displayName: 'Unknown User' },
+              }
+            } catch {
+              return { requestId: d.id, ...data, fromUser: { username: data.fromUid, displayName: 'Unknown User' } }
+            }
+          })
+        )
+        setIncomingRequests(requests)
+      } catch (err) {
+        console.error('Incoming requests error:', err)
+      }
+    }, (err) => {
+      console.error('Incoming listener error:', err)
     })
     return unsub
   }, [currentUser])
@@ -65,17 +75,27 @@ export function useFriends() {
       where('status', '==', 'pending')
     )
     const unsub = onSnapshot(q, async (snap) => {
-      const requests = await Promise.all(
-        snap.docs.map(async (d) => {
-          const data = d.data()
-          const userSnap = await getDoc(doc(db, 'users', data.toUid))
-          return {
-            requestId: d.id, ...data,
-            toUser: userSnap.exists() ? userSnap.data() : null,
-          }
-        })
-      )
-      setOutgoingRequests(requests.filter(r => r.toUser))
+      try {
+        const requests = await Promise.all(
+          snap.docs.map(async (d) => {
+            const data = d.data()
+            try {
+              const userSnap = await getDoc(doc(db, 'users', data.toUid))
+              return {
+                requestId: d.id, ...data,
+                toUser: userSnap.exists() ? userSnap.data() : { username: data.toUid, displayName: 'Unknown User' },
+              }
+            } catch {
+              return { requestId: d.id, ...data, toUser: { username: data.toUid, displayName: 'Unknown User' } }
+            }
+          })
+        )
+        setOutgoingRequests(requests)
+      } catch (err) {
+        console.error('Outgoing requests error:', err)
+      }
+    }, (err) => {
+      console.error('Outgoing listener error:', err)
     })
     return unsub
   }, [currentUser])
